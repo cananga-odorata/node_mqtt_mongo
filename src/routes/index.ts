@@ -1,10 +1,14 @@
 //src/routes/index.ts
-import { Router } from 'express';
+import express from 'express';
+import v1Router from './v1/index';
 
-const router = Router();
+const apiRouter = express.Router();
 
-router.get('/health', (req, res) => {
+apiRouter.use('/v1', v1Router);
+apiRouter.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is healthy' });
 });
 
-export default router;
+
+
+export default apiRouter;

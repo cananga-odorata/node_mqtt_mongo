@@ -1,12 +1,12 @@
 {
   "name": "node2",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "NODE_ENV=production node dist/index.js",
+    "start": "NODE_ENV=production node dist/app.js",
     "build": "tsc",
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon src/app.ts",
     "lint": "eslint src --ext .ts",
     "list:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write src/**/*.ts"
@@ -17,6 +17,8 @@
   "description": "",
   "devDependencies": {
     "@types/express": "^5.0.2",
+    "@types/moment-timezone": "^0.5.13",
+    "@types/mqtt": "^0.0.34",
     "@types/node": "^22.15.19",
     "@types/pino": "^7.0.4",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
@@ -30,8 +32,12 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@types/mongoose": "^5.11.96",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "moment-timezone": "^0.5.48",
+    "mongoose": "^8.15.0",
+    "mqtt": "^5.13.0",
     "pino": "^9.7.0"
   }
 }

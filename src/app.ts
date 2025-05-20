@@ -1,13 +1,16 @@
 import express, { Request, Response } from 'express';
 import { config } from './config/env';
-import healthRouter from './routes/index';
 import pino from 'pino';
+import apiRouter from './routes';
+import connectMongo from './database/connectMongo';
+import { client } from './config/mqtt';
 
 const logger = pino();
 const app = express();
 
 app.use(express.json());
-app.use('/api', healthRouter);
+
+app.use('/api', apiRouter);
 
 app.get('/', (req: Request, res: Response) => {
     res.json({ message: 'Welcome to the Node.js + TypeScript API!' });
@@ -26,16 +29,20 @@ app.use((err: Error, req: Request, res: Response) => {
 
 async function startServer() {
     try {
+        await connectMongo();
+        client.on('connect', () => {
+            logger.info('Connected to MQTT Broker');
+        });
         app.listen(config.PORT, () => {
             logger.info(`Environment: ${config.NODE_ENV} on Port: ${config.PORT}`);
         }).on('error', function (error: NodeJS.ErrnoException) {
-                if (error.code === 'EADDRINUSE') {
-                    logger.error(`Port ${config.PORT} is already in use`);
-                } else {
-                    logger.error('Server error:', error);
-                }
-                process.exit(1);
-            });
+            if (error.code === 'EADDRINUSE') {
+                logger.error(`Port ${config.PORT} is already in use`);
+            } else {
+                logger.error('Server error:', error);
+            }
+            process.exit(1);
+        });
     } catch (error) {
         logger.error('Failed to Start Server:', error);
         process.exit(1);
