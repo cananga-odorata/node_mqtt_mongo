@@ -13,6 +13,11 @@ app.get('/', (req: Request, res: Response) => {
     res.json({ message: 'Welcome to the Node.js + TypeScript API!' });
 });
 
+// Error handling for unknown endpoints
+app.use((req: Request, res: Response) => {
+    res.status(404).json({ error: 'Endpoint not found' });
+});
+
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response) => {
     logger.error(err.message);
