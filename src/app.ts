@@ -1,9 +1,10 @@
 import express, { Request, Response } from 'express';
-import { config } from './config/env';
+import { configEnv } from './config/env';
 import pino from 'pino';
 import apiRouter from './routes';
 import connectMongo from './database/connectMongo';
 import { client } from './config/mqtt';
+import { setupMqtt } from './services/mqttService';
 
 const logger = pino();
 const app = express();
@@ -29,15 +30,16 @@ app.use((err: Error, req: Request, res: Response) => {
 
 async function startServer() {
     try {
+        await setupMqtt();
         await connectMongo();
         client.on('connect', () => {
             logger.info('Connected to MQTT Broker');
         });
-        app.listen(config.PORT, () => {
-            logger.info(`Environment: ${config.NODE_ENV} on Port: ${config.PORT}`);
+        app.listen(configEnv.PORT, () => {
+            logger.info(`Environment: ${configEnv.NODE_ENV} on Port: ${configEnv.PORT}`);
         }).on('error', function (error: NodeJS.ErrnoException) {
             if (error.code === 'EADDRINUSE') {
-                logger.error(`Port ${config.PORT} is already in use`);
+                logger.error(`Port ${configEnv.PORT} is already in use`);
             } else {
                 logger.error('Server error:', error);
             }
