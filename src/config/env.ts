@@ -14,22 +14,24 @@ interface EnvConfig {
   MQTT_PASSWORD: string;
   BOARDS: string;
   MONGO_URL: string;
-  MQTT_CLIENTID?: string; // เพิ่ม property นี้
+  MQTT_CLIENTID?: string;
+  URL_TOYOTA?: string;
 }
 
-const config: EnvConfig = {
+const configEnv: EnvConfig = {
   NODE_ENV: (process.env.NODE_ENV as 'development' | 'production') || 'development',
   PORT: parseInt(process.env.PORT || '3333', 10),
-  MQTT_BROKER_URL: process.env.MQTT_BROKER_URL || 'mqtt://localhost',
+  MQTT_BROKER_URL: process.env.MQTT_BROKER_URL || 'mqtts://mqtt-liftngo.vendingtech.co.th',
   MQTT_USERNAME: process.env.MQTT_USERNAME || '',
   MQTT_PASSWORD: process.env.MQTT_PASSWORD || '',
   BOARDS: process.env.BOARDS || 'DTTT1',
   MONGO_URL: process.env.MONGO_URL || 'mongodb://localhost:27017/mydatabase',
-  MQTT_CLIENTID: process.env.MQTT_CLIENTID, // เพิ่ม property นี้
+  MQTT_CLIENTID: process.env.MQTT_CLIENTID,
+  URL_TOYOTA: process.env.URL_TOYOTA || "",
 };
 
-if (!config.MQTT_BROKER_URL) {
+if (!configEnv.MQTT_BROKER_URL) {
   throw new Error('MQTT_BROKER_URL is required');
 }
 
-export { config };
+export { configEnv };

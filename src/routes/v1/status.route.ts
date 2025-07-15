@@ -1,6 +1,5 @@
-import express, { Request, Response, RequestHandler } from 'express';
+import express, { RequestHandler } from 'express';
 import { getVehicleStatus, getLatestVehicleStatus } from '../../controllers/vehicleController';
-import { client } from '../../config/mqtt';
 import { postWrStatus } from '../../services/vehicleService';
 
 const router = express.Router();
