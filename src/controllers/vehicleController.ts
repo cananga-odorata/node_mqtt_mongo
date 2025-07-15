@@ -97,3 +97,26 @@ export const getLatestVehicleHeartbeat = async (req: Request, res: Response) => 
         });
     }
 };
+
+export const getVehicleStatusDateRange = async (req: Request, res: Response) => {
+    try {
+        const { vehicleId, startDate, endDate } = req.params;
+
+        const params: any = {};
+        if (vehicleId) params.vehicleId = vehicleId;
+        if (startDate) params.startDate = new Date(startDate);
+        if (endDate) params.endDate = new Date(endDate);
+
+        const statuses = await getVehicleStatuses(params);
+        res.status(200).json({
+            success: true,
+            data: statuses,
+            count: statuses.length,
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: (error instanceof Error ? error.message : 'Failed to fetch vehicle statuses'),
+        });
+    }
+}
