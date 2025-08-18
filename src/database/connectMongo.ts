@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { config } from "../config/env";
+import { configEnv } from "../config/env";
 
-const MONGO_URI = config.MONGO_URL;
+const MONGO_URI = configEnv.MONGO_URL;
 
 const connectMongo = async () => {
     try {

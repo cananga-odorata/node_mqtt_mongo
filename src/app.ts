@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { configEnv } from './config/env';
 import pino from 'pino';
 import apiRouter from './routes';
@@ -23,8 +23,8 @@ app.use((req: Request, res: Response) => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response) => {
-    logger.error(err.message);
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    logger.error({ err }, err.message);
     res.status(500).json({ error: 'Internal Server Error' });
 });
 
@@ -37,16 +37,16 @@ async function startServer() {
         });
         app.listen(configEnv.PORT, () => {
             logger.info(`Environment: ${configEnv.NODE_ENV} on Port: ${configEnv.PORT}`);
-        }).on('error', function (error: NodeJS.ErrnoException) {
+        }).on('error', (error: NodeJS.ErrnoException) => {
             if (error.code === 'EADDRINUSE') {
-                logger.error(`Port ${configEnv.PORT} is already in use`);
+                logger.error({ error }, `Port ${configEnv.PORT} is already in use`);
             } else {
-                logger.error('Server error:', error);
+                logger.error({ error }, 'Server error');
             }
             process.exit(1);
         });
     } catch (error) {
-        logger.error('Failed to Start Server:', error);
+        logger.error({ error }, 'Failed to Start Server');
         process.exit(1);
     }
 }
