@@ -3,14 +3,14 @@ import { getVehicleStatuses, getVehicleHeartbeats, LatestVehicleHeartbeat, Lates
 
 export const getVehicleStatus = async (req: Request, res: Response) => {
     try {
-        const { vehicleId, startDate, endDate } = req.params;
+        const { vehicleId, startDate, endDate } = req.query;
 
         const params: any = {};
-        if (vehicleId) params.vehicleId = vehicleId;
-        if (startDate) params.startDate = new Date(startDate);
-        if (endDate) params.endDate = new Date(endDate);
+        if (vehicleId) params.vehicleId = vehicleId as string;
+        if (startDate) params.startDate = new Date(startDate as string);
+        if (endDate) params.endDate = new Date(endDate as string);
 
-        const statuses = await getVehicleStatuses(params);
+        const statuses = await getVehicleStatuses({ ...params, limit: 100 });
         res.status(200).json({
             success: true,
             data: statuses,
@@ -120,3 +120,27 @@ export const getVehicleStatusDateRange = async (req: Request, res: Response) => 
         });
     }
 }
+export const getAllStatusesByVehicleId = async (req: Request, res: Response) => {
+    try {
+        const { vehicleId } = req.params;
+        if (!vehicleId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vehicle ID is required in the URL path.',
+            });
+        }
+
+        const statuses = await getVehicleStatuses({ vehicleId });
+        const heartbeats = await getVehicleHeartbeats({ vehicleId });
+
+        res.status(200).json({
+            success: true,
+            data: { statuses, heartbeats },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: (error instanceof Error ? error.message : 'Failed to fetch vehicle data'),
+        });
+    }
+};

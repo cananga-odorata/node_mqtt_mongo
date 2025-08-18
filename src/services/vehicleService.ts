@@ -4,18 +4,29 @@ import { client } from "../config/mqtt";
 import { configEnv } from "../config/env";
 
 export const postWrStatus: RequestHandler = (req, res) => {
-    const { status, vehicleId } = req.body;
-    if (typeof status !== 'number' || !vehicleId) {
-        res.status(400).json({ error: 'Missing or invalid status or vehicleId' });
-        return;
+    const { status, model, vehicleId } = req.body;
+
+    if (!vehicleId) {
+        return res.status(400).json({ error: 'Missing vehicleId' });
     }
+
+    const hasStatus = typeof status === 'number';
+    const hasModel = typeof model === 'number';
+    
+    if (!hasStatus && !hasModel) {
+        return res.status(400).json({ error: 'Request body must contain either status or model as a number.' });
+    }
+
+    const payload: { status?: number; model?: number } = {};
+    if (hasStatus) payload.status = status;
+    if (hasModel) payload.model = model;
+
     const topic = `vehicle/${vehicleId}/wrstatus`;
-    client.publish(topic, JSON.stringify({ status }), { qos: 1 }, (err?: Error) => {
+    client.publish(topic, JSON.stringify(payload), { qos: 1 }, (err?: Error) => {
         if (err) {
-            res.status(500).json({ error: 'Failed to publish to MQTT', details: err.message });
-            return;
+            return res.status(500).json({ error: 'Failed to publish to MQTT', details: err.message });
         }
-        res.json({ success: true, topic, status });
+        res.json({ success: true, topic, ...payload });
     });
 };
 

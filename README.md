@@ -41,9 +41,10 @@ npm start
 - `GET /api/v1/status` — Get all vehicle status
 - `GET /api/v1/status/latest` — Get latest status for all vehicles
 - `GET /api/v1/status/latest/:vehicleId` — Get latest status for a specific vehicle
-- `POST /api/v1/status/wrstatus` — Publish a number to MQTT topic `vehicle/{vehicleId}/wrstatus`
-  - **Body:** `{ "vehicleId": "<id>", "value": <number> }`
-  - **Response:** `{ success: true, topic, value }`
+- `GET /api/v1/vehicles/:vehicleId/data` — Get all status and heartbeat data for a specific vehicle.
+- `POST /api/v1/status/wrstatus` — Publish a status and/or model to the MQTT topic `vehicle/{vehicleId}/wrstatus`.
+  - **Body:** `{ "vehicleId": "string", "status": number, "model": number }` (At least one of `status` or `model` is required).
+  - **Response:** `{ "success": true, "topic": "...", ...data }` (The response includes the `status` and/or `model` that was sent).
 
 ### Error Handling
 - 404: Returns `{ error: 'Endpoint not found' }` for unknown endpoints

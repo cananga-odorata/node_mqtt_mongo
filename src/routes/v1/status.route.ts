@@ -5,7 +5,7 @@ import { postWrStatus } from '../../services/vehicleService';
 const router = express.Router();
 
 // GET /api/v1/status
-router.get('/', getVehicleStatus as RequestHandler);
+router.get('/:vehicle', getVehicleStatus as RequestHandler);
 // GET /api/v1/status/latest
 router.get('/latest', getLatestVehicleStatus as RequestHandler);
 // GET /api/v1/status/latest/:vehicleId

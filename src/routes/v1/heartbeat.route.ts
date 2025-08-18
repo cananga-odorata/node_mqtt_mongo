@@ -4,7 +4,7 @@ import { getVehicleHeartbeat, getLatestVehicleHeartbeat } from '../../controller
 const router = express.Router();
 
 // GET /api/v1/heartbeat
-router.get('/', getVehicleHeartbeat as RequestHandler);
+router.get('/:vehicleId', getVehicleHeartbeat as RequestHandler);
 // GET /api/v1/heartbeat/latest/:vehicleId?
 router.get('/latest/:vehicleId', getLatestVehicleHeartbeat as RequestHandler);
 

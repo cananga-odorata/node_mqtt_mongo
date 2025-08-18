@@ -20,7 +20,7 @@
     "@types/moment-timezone": "^0.5.13",
     "@types/mqtt": "^0.0.34",
     "@types/node": "^22.15.19",
-    "@types/pino": "^7.0.4",
+    "@types/pino": "^7.0.5",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
     "@typescript-eslint/parser": "^8.32.1",
     "eslint": "^9.27.0",
