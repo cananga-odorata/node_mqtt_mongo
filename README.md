@@ -38,10 +38,11 @@ npm start
 ### API Endpoints
 - `GET /api/health` — Health check endpoint
 - `GET /` — Welcome message
-- `GET /api/v1/status` — Get all vehicle status
-- `GET /api/v1/status/latest` — Get latest status for all vehicles
-- `GET /api/v1/status/latest/:vehicleId` — Get latest status for a specific vehicle
-- `GET /api/v1/vehicles/:vehicleId/data` — Get all status and heartbeat data for a specific vehicle.
+- `GET /api/v1/status/:vehicle` — Get vehicle statuses for a specific vehicle.
+- `GET /api/v1/status/latest` — Get the latest status for all vehicles.
+- `GET /api/v1/status/latest/:vehicleId` — Get the latest status for a specific vehicle.
+- `GET /api/v1/status/latest/:vehicleId/:endDate` — Get vehicle statuses for a specific vehicle filtered by an end date.
+- `GET /api/v1/statusAndHeartbeat/:vehicleId` — Get all status and heartbeat data for a specific vehicle.
 - `POST /api/v1/status/wrstatus` — Publish a status and/or model to the MQTT topic `vehicle/{vehicleId}/wrstatus`.
   - **Body:** `{ "vehicleId": "string", "status": number, "model": number }` (At least one of `status` or `model` is required).
   - **Response:** `{ "success": true, "topic": "...", ...data }` (The response includes the `status` and/or `model` that was sent).
