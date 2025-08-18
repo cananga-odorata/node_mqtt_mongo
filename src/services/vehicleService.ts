@@ -3,31 +3,43 @@ import { RequestHandler } from "express";
 import { client } from "../config/mqtt";
 import { configEnv } from "../config/env";
 
-export const postWrStatus: RequestHandler = (req, res) => {
-    const { status, model, vehicleId } = req.body;
+export const postWrStatus: RequestHandler = async (req, res, next) => {
+    try {
+        const { status, model, vehicleId } = req.body;
 
-    if (!vehicleId) {
-        return res.status(400).json({ error: 'Missing vehicleId' });
-    }
-
-    const hasStatus = typeof status === 'number';
-    const hasModel = typeof model === 'number';
-    
-    if (!hasStatus && !hasModel) {
-        return res.status(400).json({ error: 'Request body must contain either status or model as a number.' });
-    }
-
-    const payload: { status?: number; model?: number } = {};
-    if (hasStatus) payload.status = status;
-    if (hasModel) payload.model = model;
-
-    const topic = `vehicle/${vehicleId}/wrstatus`;
-    client.publish(topic, JSON.stringify(payload), { qos: 1 }, (err?: Error) => {
-        if (err) {
-            return res.status(500).json({ error: 'Failed to publish to MQTT', details: err.message });
+        if (!vehicleId) {
+            res.status(400).json({ error: 'Missing vehicleId' });
+            return;
         }
+
+        const hasStatus = typeof status === 'number';
+        const hasModel = typeof model === 'number';
+        
+        if (!hasStatus && !hasModel) {
+            res.status(400).json({ error: 'Request body must contain either status or model as a number.' });
+            return;
+        }
+
+        const payload: { status?: number; model?: number } = {};
+        if (hasStatus) payload.status = status;
+        if (hasModel) payload.model = model;
+
+        const topic = `vehicle/${vehicleId}/wrstatus`;
+        
+        await new Promise<void>((resolve, reject) => {
+            client.publish(topic, JSON.stringify(payload), { qos: 1 }, (err?: Error) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
         res.json({ success: true, topic, ...payload });
-    });
+    } catch (err) {
+        res.status(500).json({ 
+            error: 'Failed to publish to MQTT', 
+            details: err instanceof Error ? err.message : 'Unknown error'
+        });
+    }
 };
 
 const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number = 10000): Promise<Response> => {
