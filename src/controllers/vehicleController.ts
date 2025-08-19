@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getVehicleStatuses, getVehicleHeartbeats, LatestVehicleHeartbeat, LatestVehicleStatus } from '../services/vehicleDataService';
+import { getVehicleStatuses, getVehicleHeartbeats, LatestVehicleHeartbeat, LatestVehicleStatus, getLatestVehicleStatusWithModel } from '../services/vehicleDataService';
 
 export const getVehicleStatus = async (req: Request, res: Response) => {
     try {
@@ -94,6 +94,40 @@ export const getLatestVehicleHeartbeat = async (req: Request, res: Response) => 
         res.status(400).json({
             success: false,
             message: (error instanceof Error ? error.message : 'Failed to fetch latest vehicle heartbeat'),
+        });
+    }
+};
+
+export const getLatestVehicleModel = async (req: Request, res: Response) => {
+    try {
+        const { vehicleId } = req.params;
+        if (!vehicleId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vehicle ID is required.',
+            });
+        }
+
+        const status = await getLatestVehicleStatusWithModel(vehicleId);
+        if (!status) {
+            return res.status(404).json({
+                success: false,
+                message: `No status with a model found for vehicle ${vehicleId}`,
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                vehicleId: status.vehicleId,
+                model: status.rawData.model,
+                timestamp: status.timestamp,
+            },
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: (error instanceof Error ? error.message : 'Failed to fetch latest vehicle model'),
         });
     }
 };

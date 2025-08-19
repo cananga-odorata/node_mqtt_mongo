@@ -43,6 +43,26 @@ export const getVehicleStatuses = async (params: QueryParams = {}): Promise<IVeh
     }
 };
 
+export const getLatestVehicleStatusWithModel = async (vehicleId: string): Promise<IVehicleStatus | null> => {
+    try {
+        const status = await VehicleStatusModel.findOne({
+            vehicleId: vehicleId,
+            'rawData.model': { $exists: true, $ne: null }
+        })
+        .sort({ timestamp: -1 })
+        .lean();
+
+        return status;
+    } catch (error) {
+        console.error('Error fetching latest vehicle status with model:', error);
+        if (error instanceof Error) {
+            throw new Error(error.message || 'Failed to fetch latest vehicle status with model');
+        } else {
+            throw new Error('Failed to fetch latest vehicle status with model');
+        }
+    }
+};
+
 export const getVehicleHeartbeats = async (params: QueryParams = {}): Promise<IVehicleHeartbeat[]> => {
     try {
         const { vehicleId, startDate, endDate, limit = 100 } = params;
