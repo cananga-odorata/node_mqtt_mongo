@@ -99,7 +99,9 @@ export const getVehicleHeartbeats = async (params: QueryParams = {}): Promise<IV
 
 export const LatestVehicleStatus = async (vehicleId?: string): Promise<IVehicleStatus | null> => {
     try {
-        const query: any = {};
+        const query: any = {
+            'rawData.status': { $exists: true, $ne: null }
+        };
         if (vehicleId) query.vehicleId = vehicleId;
 
         const status = await VehicleStatusModel.findOne(query)
