@@ -2,6 +2,7 @@
 import { RequestHandler } from "express";
 import { client } from "../config/mqtt";
 import { configEnv } from "../config/env";
+import { getLatestVehicleStatusWithModel } from './vehicleDataService';
 
 export const postWrStatus: RequestHandler = async (req, res, next) => {
     try {
@@ -81,6 +82,13 @@ export const callServiceBoards = async (topic: string, serialnumber: string, raw
         console.log("Raw Data:", JSON.stringify(rawData, null, 2));
         console.log("callServiceBoards executing...");
         console.log(`URL: ${configEnv.URL_TOYOTA}`);
+
+        const latestStatus = await getLatestVehicleStatusWithModel(serialnumber);
+        if (latestStatus && latestStatus.rawData.model) {
+            console.log(`Latest model for ${serialnumber} is ${latestStatus.rawData.model}`)
+        } else {
+            console.log(`No model found for ${serialnumber}`)
+        }
 
         const res = await retryFetch(`${configEnv.URL_TOYOTA}/controller/checkbalance`, {
             method: 'POST',

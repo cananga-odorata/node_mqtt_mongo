@@ -59,10 +59,15 @@ export const getLatestVehicleStatus = async (req: Request, res: Response) => {
                 message: `No status found for vehicle ${vehicleId || 'any vehicle'}`,
             });
         }
+        const responseData = {
+            vehicleId: status.vehicleId,
+            timestamp: status.timestamp,
+            status: status.rawData.status
+        };
 
         res.status(200).json({
             success: true,
-            data: status,
+            data: responseData,
             count: 1,
         });
     } catch (error) {
