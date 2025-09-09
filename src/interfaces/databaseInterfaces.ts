@@ -13,9 +13,12 @@ export interface IVehicleHeartbeat {
     rawData: {
         mode: number;
         temp: number;
-        battery: number;
-        usage_time_mn: number;
-        credit_remaining: number;
-        credit_overuse: number;
+        voltage?: number;
+        battery?: number;
+        total_usage_time?: number;
+        sesstion_usage?: number;
+        usage_time_mn?: number;
+        credit_remaining?: number;
+        credit_overuse?: number;
     };
 }
