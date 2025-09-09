@@ -1,5 +1,13 @@
 import { Request, Response } from 'express';
-import { getVehicleStatuses, getVehicleHeartbeats, LatestVehicleHeartbeat, LatestVehicleStatus, getLatestVehicleStatusWithModel } from '../services/vehicleDataService';
+import { 
+    getVehicleStatuses, 
+    getVehicleHeartbeats, 
+    LatestVehicleHeartbeat, 
+    LatestVehicleStatus, 
+    getLatestVehicleStatusWithModel, 
+    getMonthlyUsage,
+    getYearlyUsageByMonth
+} from '../services/vehicleDataService';
 
 export const getVehicleStatus = async (req: Request, res: Response) => {
     try {
@@ -74,6 +82,95 @@ export const getLatestVehicleStatus = async (req: Request, res: Response) => {
         res.status(400).json({
             success: false,
             message: (error instanceof Error ? error.message : 'Failed to fetch latest vehicle status'),
+        });
+    }
+};
+
+export const getReposrtUsagePerYear = async (req: Request, res: Response) => {
+    try {
+        const { year, vehicleId } = req.params;
+        if (!year || isNaN(Number(year))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Year parameter is required and must be a valid number.',
+            });
+        }
+        const startDate = new Date(Number(year), 0, 1);
+        const endDate = new Date(Number(year) + 1, 0, 1);
+
+        const params: any = {
+            startDate,
+            endDate
+        };
+
+        if (vehicleId) params.vehicleId = vehicleId;
+
+        const statuses = await getVehicleHeartbeats(params);
+
+        res.status(200).json({
+            success: true,
+            data: statuses,
+            count: statuses.length,
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: (error instanceof Error ? error.message : 'Failed to fetch vehicle statuses'),
+        });
+    }
+};
+
+export const getReportUsagePerYear = async (req: Request, res: Response) => {
+    try {
+        const { year, vehicleId } = req.params;
+        
+        if (!year || isNaN(Number(year))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Year parameter is required and must be a valid number.',
+            });
+        }
+
+        const yearlyUsage = await getYearlyUsageByMonth(Number(year), vehicleId);
+        res.status(200).json({
+            success: true,
+            data: yearlyUsage
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: (error instanceof Error ? error.message : 'Failed to fetch yearly usage'),
+        });
+    }
+};
+
+export const getReportUsagePerMonth = async (req: Request, res: Response) => {
+    try {
+        const { year, month, vehicleId } = req.params;
+        
+        if (!year || isNaN(Number(year))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Year parameter is required and must be a valid number.',
+            });
+        }
+
+        if (!month || isNaN(Number(month)) || Number(month) < 1 || Number(month) > 12) {
+            return res.status(400).json({
+                success: false,
+                message: 'Month parameter is required and must be a valid number between 1 and 12.',
+            });
+        }
+
+        const usage = await getMonthlyUsage(Number(year), Number(month), vehicleId);
+        res.status(200).json({
+            success: true,
+            data: usage
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: (error instanceof Error ? error.message : 'Failed to fetch monthly usage'),
         });
     }
 };
