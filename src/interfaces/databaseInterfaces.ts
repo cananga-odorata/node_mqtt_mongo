@@ -22,3 +22,10 @@ export interface IVehicleHeartbeat {
         credit_overuse?: number;
     };
 }
+
+export interface VehicleModelStatus {
+    vehicleId: string;
+    timestamp: string;
+    status: string;
+    model: string;
+}

@@ -1,13 +1,43 @@
 import { Request, Response } from 'express';
-import { 
-    getVehicleStatuses, 
-    getVehicleHeartbeats, 
-    LatestVehicleHeartbeat, 
-    LatestVehicleStatus, 
-    getLatestVehicleStatusWithModel, 
+import {
+    getVehicleStatuses,
+    getVehicleHeartbeats,
+    LatestVehicleHeartbeat,
+    LatestVehicleStatus,
+    getLatestVehicleStatusWithModel,
     getMonthlyUsage,
-    getYearlyUsageByMonth
+    getYearlyUsageByMonth,
+    getLatestVehicleModelStatusBulk
 } from '../services/vehicleDataService';
+
+
+export const getLatestVehicleModelStatusController = async (req: Request, res: Response) => {
+    try {
+        const { vehicleId, startDate, endDate } = req.query;
+
+        if (!vehicleId) {
+            return res.status(400).json({ error: 'Missing vehicleId in query' });
+        }
+
+        const vehicleIds = typeof vehicleId === 'string'
+            ? vehicleId.split(',').map(id => id.trim())
+            : Array.isArray(vehicleId)
+                ? vehicleId.map(id => String(id).trim())
+                : [];
+
+        const results = await getLatestVehicleModelStatusBulk(vehicleIds, startDate as string | undefined, endDate as string | undefined);
+
+        res.json({
+            success: true,
+            data: results,
+            count: results.length
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 
 export const getVehicleStatus = async (req: Request, res: Response) => {
     try {
@@ -123,7 +153,7 @@ export const getReposrtUsagePerYear = async (req: Request, res: Response) => {
 export const getReportUsagePerYear = async (req: Request, res: Response) => {
     try {
         const { year, vehicleId } = req.params;
-        
+
         if (!year || isNaN(Number(year))) {
             return res.status(400).json({
                 success: false,
@@ -147,7 +177,7 @@ export const getReportUsagePerYear = async (req: Request, res: Response) => {
 export const getReportUsagePerMonth = async (req: Request, res: Response) => {
     try {
         const { year, month, vehicleId } = req.params;
-        
+
         if (!year || isNaN(Number(year))) {
             return res.status(400).json({
                 success: false,
