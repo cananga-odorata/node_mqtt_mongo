@@ -14,7 +14,7 @@ router.get('/latest-model/:vehicleId', getLatestVehicleModel as RequestHandler);
 // GET /api/v1/status/latest/:vehicleId/:endDate
 router.get('/latest/:vehicleId/:endDate', getVehicleStatusDateRange as RequestHandler);
 
-router.get('/latest-model-status', getLatestVehicleModelStatusController);
+router.get('/latest-model-status', getLatestVehicleModelStatusController as RequestHandler);
 
 
 
