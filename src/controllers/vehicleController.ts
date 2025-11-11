@@ -7,9 +7,35 @@ import {
     getLatestVehicleStatusWithModel,
     getMonthlyUsage,
     getYearlyUsageByMonth,
-    getLatestVehicleModelStatusBulk
+    getLatestVehicleModelStatusBulk,
+    getLatestVehicleHeartbeatBulk
 } from '../services/vehicleDataService';
 
+export const getLatestVehicleHeartbeatBulkController = async (req: Request, res: Response) => {
+    try {
+        console.log(`Received request for latest vehicle heartbeat bulk with query:`, req.query);
+        const { vehicleIds, startDate, endDate } = req.query;
+        if (!vehicleIds) {
+            return res.status(400).json({ error: 'Missing vehicleIds in query' });
+        }
+
+        const vehicleIdArray = typeof vehicleIds === 'string'
+            ? vehicleIds.split(',').map(id => id.trim())
+            : Array.isArray(vehicleIds)
+                ? vehicleIds.map(id => String(id).trim())
+                : [];
+
+        const results = await getLatestVehicleHeartbeatBulk(vehicleIdArray, startDate as string | undefined, endDate as string | undefined);
+        res.json({
+            success: true,
+            data: results,
+            count: results.length
+        });;
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
 
 export const getLatestVehicleModelStatusController = async (req: Request, res: Response) => {
     try {

@@ -10,6 +10,48 @@ interface QueryParams {
 }
 
 
+export const getLatestVehicleHeartbeatBulk = async (
+    vehicleIds: string[],
+    startDate?: string,
+    endDate?: string
+): Promise<IVehicleHeartbeat[]> => {
+
+    // กำหนด default เป็นเดือนปัจจุบันถ้าไม่ได้ส่ง startDate / endDate
+    const now = new Date();
+    const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1); // วันที่ 1 ของเดือนนี้
+    const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); // สิ้นเดือน
+
+    const match: any = {
+        vehicleId: { $in: vehicleIds },
+        timestamp: { $exists: true, $ne: null }
+    };
+
+    // ใช้ค่า startDate / endDate หรือ default เดือนนี้
+    match.timestamp = {
+        $gte: startDate ? new Date(startDate) : defaultStart,
+        $lte: endDate ? new Date(endDate) : defaultEnd
+    };
+
+    console.log('vehicleIdArray:', vehicleIds);
+    console.log('match query:', match);
+
+    const latestHeartbeats = await VehicleHeartbeatModel.aggregate([
+        { $match: match },
+        { $sort: { vehicleId: 1, timestamp: -1 } }, // sort ใหม่สุดไปเก่าสุด
+        {
+            $group: {
+                _id: '$vehicleId',
+                latest: { $first: '$$ROOT' } // เอา record ใหม่สุดต่อ vehicle
+            }
+        },
+        { $replaceRoot: { newRoot: '$latest' } } // flatten
+    ]).allowDiskUse(false).exec();
+
+    return latestHeartbeats;
+};
+
+
+
 
 
 export const getLatestVehicleModelStatusBulk = async (
