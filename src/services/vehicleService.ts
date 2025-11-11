@@ -2,12 +2,13 @@
 import { RequestHandler } from "express";
 import { client } from "../config/mqtt";
 import { configEnv } from "../config/env";
-import { getLatestVehicleStatusWithModel } from './vehicleDataService';
+// import { getLatestVehicleStatusWithModel } from './vehicleDataService';
 
 export const postWrStatus: RequestHandler = async (req, res, next) => {
     try {
         const { status, model, vehicleId } = req.body;
 
+        console.log(`Received WR Status POST: vehicleId=${vehicleId}, status=${status}, model=${model}`);
         if (!vehicleId) {
             res.status(400).json({ error: 'Missing vehicleId' });
             return;
@@ -15,7 +16,7 @@ export const postWrStatus: RequestHandler = async (req, res, next) => {
 
         const hasStatus = typeof status === 'number';
         const hasModel = typeof model === 'number';
-        
+
         if (!hasStatus && !hasModel) {
             res.status(400).json({ error: 'Request body must contain either status or model as a number.' });
             return;
@@ -26,18 +27,18 @@ export const postWrStatus: RequestHandler = async (req, res, next) => {
         if (hasModel) payload.model = model;
 
         const topic = `vehicle/${vehicleId}/wrstatus`;
-        
+
         await new Promise<void>((resolve, reject) => {
             client.publish(topic, JSON.stringify(payload), { qos: 1 }, (err?: Error) => {
                 if (err) reject(err);
                 else resolve();
             });
         });
-        
+
         res.json({ success: true, topic, ...payload });
     } catch (err) {
-        res.status(500).json({ 
-            error: 'Failed to publish to MQTT', 
+        res.status(500).json({
+            error: 'Failed to publish to MQTT',
             details: err instanceof Error ? err.message : 'Unknown error'
         });
     }
