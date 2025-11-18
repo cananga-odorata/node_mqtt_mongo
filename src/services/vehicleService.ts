@@ -82,7 +82,7 @@ export const callServiceBoards = async (topic: string, serialnumber: string, raw
         console.log("Serial Number:", serialnumber);
         console.log("Raw Data:", JSON.stringify(rawData, null, 2));
         console.log("callServiceBoards executing...");
-        console.log(`URL: ${configEnv.URL_TOYOTA}`);
+        console.log(`URL: ${configEnv.CHECKBALANCE_URL}`);
 
         // const latestStatus = await getLatestVehicleStatusWithModel(serialnumber);
         // if (latestStatus && latestStatus.rawData.model) {
@@ -91,12 +91,12 @@ export const callServiceBoards = async (topic: string, serialnumber: string, raw
         //     console.log(`No model found for ${serialnumber}`)
         // }
 
-        const res = await retryFetch(`${configEnv.URL_TOYOTA}/controller/checkbalance`, {
+        const res = await retryFetch(`${configEnv.CHECKBALANCE_URL}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ serialNumber: serialnumber }),
+            body: JSON.stringify({ serial_number: serialnumber }),
         });
 
         console.log('Response Status:', res.status);

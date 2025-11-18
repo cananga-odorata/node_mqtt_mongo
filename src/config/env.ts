@@ -16,6 +16,7 @@ interface EnvConfig {
   MONGO_URL: string;
   MQTT_CLIENTID?: string;
   URL_TOYOTA?: string;
+  CHECKBALANCE_URL?: string;
 }
 
 const configEnv: EnvConfig = {
@@ -28,6 +29,7 @@ const configEnv: EnvConfig = {
   MONGO_URL: process.env.MONGO_URL || 'mongodb://localhost:27017/mydatabase',
   MQTT_CLIENTID: process.env.MQTT_CLIENTID,
   URL_TOYOTA: process.env.URL_TOYOTA || "",
+  CHECKBALANCE_URL: process.env.CHECKBALANCE_URL || "",
 };
 
 if (!configEnv.MQTT_BROKER_URL) {
