@@ -8,13 +8,15 @@ import {
     getMonthlyUsage,
     getYearlyUsageByMonth,
     getLatestVehicleModelStatusBulk,
-    getLatestVehicleHeartbeatBulk
+    getLatestVehicleHeartbeatBulk,
+    getDailyUsagePerVehicleBulk,
+    getUsageTimeSeriesForGraph
 } from '../services/vehicleDataService';
 
 export const getLatestVehicleHeartbeatBulkController = async (req: Request, res: Response) => {
     try {
         console.log(`Received request for latest vehicle heartbeat bulk with query:`, req.query);
-        const { vehicleIds, startDate, endDate } = req.query;
+        const { vehicleIds, startDateTime, endDateTime } = req.query;
         if (!vehicleIds) {
             return res.status(400).json({ error: 'Missing vehicleIds in query' });
         }
@@ -25,12 +27,16 @@ export const getLatestVehicleHeartbeatBulkController = async (req: Request, res:
                 ? vehicleIds.map(id => String(id).trim())
                 : [];
 
-        const results = await getLatestVehicleHeartbeatBulk(vehicleIdArray, startDate as string | undefined, endDate as string | undefined);
+        const results = await getLatestVehicleHeartbeatBulk(
+            vehicleIdArray,
+            startDateTime as string | undefined,
+            endDateTime as string | undefined
+        );
         res.json({
             success: true,
             data: results,
             count: results.length
-        });;
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -334,5 +340,62 @@ export const getAllStatusesByVehicleId = async (req: Request, res: Response) => 
             success: false,
             message: (error instanceof Error ? error.message : 'Failed to fetch vehicle data'),
         });
+    }
+};
+
+
+export const getDailyUsagePerVehicleBulkController = async (req: Request, res: Response) => {
+    try {
+        const { vehicleIds, date } = req.query;
+        if (!vehicleIds) {
+            return res.status(400).json({ error: 'Missing vehicleIds in query' });
+        }
+        if (!date) {
+            return res.status(400).json({ error: 'Missing date in query (format: YYYY-MM-DD)' });
+        }
+
+        const vehicleIdArray = typeof vehicleIds === 'string'
+            ? vehicleIds.split(',').map(id => id.trim())
+            : Array.isArray(vehicleIds)
+                ? vehicleIds.map(id => String(id).trim())
+                : [];
+
+        const results = await getDailyUsagePerVehicleBulk(vehicleIdArray, date as string);
+        res.json({
+            success: true,
+            data: results,
+            count: results.length
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Internal Server Error' });
+    }
+};
+
+export const getUsageTimeSeriesForGraphController = async (req: Request, res: Response) => {
+    try {
+        const { vehicleIds, startDateTime, endDateTime } = req.query;
+        if (!vehicleIds) {
+            return res.status(400).json({ error: 'Missing vehicleIds in query' });
+        }
+
+        const vehicleIdArray = typeof vehicleIds === 'string'
+            ? vehicleIds.split(',').map(id => id.trim())
+            : Array.isArray(vehicleIds)
+                ? vehicleIds.map(id => String(id).trim())
+                : [];
+
+        const results = await getUsageTimeSeriesForGraph(
+            vehicleIdArray,
+            startDateTime as string | undefined,
+            endDateTime as string | undefined
+        );
+        res.json({
+            success: true,
+            data: results
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Internal Server Error' });
     }
 };

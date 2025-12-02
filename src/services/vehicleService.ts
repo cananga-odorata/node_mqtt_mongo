@@ -84,6 +84,13 @@ export const callServiceBoards = async (topic: string, serialnumber: string, raw
         console.log("callServiceBoards executing...");
         console.log(`URL: ${configEnv.CHECKBALANCE_URL}`);
 
+        // Normalize URL: ensure it has a scheme (http/https). Fetch in Node requires an absolute URL.
+        const rawUrl = configEnv.CHECKBALANCE_URL || '';
+        const normalizedUrl = rawUrl.match(/^https?:\/\//i) ? rawUrl : `http://${rawUrl}`;
+        if (!rawUrl) {
+            throw new Error('CHECKBALANCE_URL is not configured');
+        }
+
         // const latestStatus = await getLatestVehicleStatusWithModel(serialnumber);
         // if (latestStatus && latestStatus.rawData.model) {
         //     console.log(`Latest model for ${serialnumber} is ${latestStatus.rawData.model}`)
@@ -91,7 +98,7 @@ export const callServiceBoards = async (topic: string, serialnumber: string, raw
         //     console.log(`No model found for ${serialnumber}`)
         // }
 
-        const res = await retryFetch(`${configEnv.CHECKBALANCE_URL}`, {
+        const res = await retryFetch(normalizedUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
