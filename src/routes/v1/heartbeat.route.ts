@@ -4,11 +4,18 @@ import {
     getLatestVehicleHeartbeat,
     getReportUsagePerMonth,
     getReportUsagePerYear,
-    getLatestVehicleHeartbeatBulkController
+    getLatestVehicleHeartbeatBulkController,
+    getDailyUsagePerVehicleBulkController,
+    getUsageTimeSeriesForGraphController
 } from '../../controllers/vehicleController';
 
 const router = express.Router();
 
+// GET /api/v1/heartbeat/usage-time-series?vehicleIds=...&startDateTime=...&endDateTime=...
+router.get('/usage-time-series', getUsageTimeSeriesForGraphController as RequestHandler);
+
+// GET /api/v1/heartbeat/daily-usage-bulk?vehicleIds=...&date=YYYY-MM-DD
+router.get('/daily-usage-bulk', getDailyUsagePerVehicleBulkController as RequestHandler);
 
 // GET /api/v1/heartbeat/latest-bulk
 router.get('/latest-bulk', getLatestVehicleHeartbeatBulkController as RequestHandler);
@@ -28,6 +35,7 @@ router.get('/reportUsagePerMonth/:year/:month', getReportUsagePerMonth as Reques
 // GET /api/v1/heartbeat/reportUsagePerMonth/:year/:month/:vehicleId
 router.get('/reportUsagePerMonth/:year/:month/:vehicleId', getReportUsagePerMonth as RequestHandler);
 
+// Generic vehicleId route should be last so it doesn't capture other paths
 // GET /api/v1/heartbeat/:vehicleId
 router.get('/:vehicleId', getVehicleHeartbeat as RequestHandler);
 

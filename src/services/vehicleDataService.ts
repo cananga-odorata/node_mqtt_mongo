@@ -12,28 +12,45 @@ interface QueryParams {
 
 export const getLatestVehicleHeartbeatBulk = async (
     vehicleIds: string[],
-    startDate?: string,
-    endDate?: string
+    startDateTime?: string,
+    endDateTime?: string
 ): Promise<IVehicleHeartbeat[]> => {
 
-    // กำหนด default เป็นเดือนปัจจุบันถ้าไม่ได้ส่ง startDate / endDate
+    // กำหนด default เป็นเดือนปัจจุบันถ้าไม่ได้ส่ง startDateTime / endDateTime
     const now = new Date();
     const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1); // วันที่ 1 ของเดือนนี้
     const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); // สิ้นเดือน
+
+    let dateStart = defaultStart;
+    let dateEnd = defaultEnd;
+
+    // Parse startDateTime และ endDateTime (ISO 8601 format: 2025-12-02T08:00:00 หรือ 2025-12-02 08:00)
+    if (startDateTime) {
+        dateStart = new Date(startDateTime);
+        if (isNaN(dateStart.getTime())) {
+            throw new Error(`Invalid startDateTime format: ${startDateTime}. Use ISO 8601 format (e.g., 2025-12-02T08:00:00)`);
+        }
+    }
+    if (endDateTime) {
+        dateEnd = new Date(endDateTime);
+        if (isNaN(dateEnd.getTime())) {
+            throw new Error(`Invalid endDateTime format: ${endDateTime}. Use ISO 8601 format (e.g., 2025-12-02T17:00:00)`);
+        }
+    }
 
     const match: any = {
         vehicleId: { $in: vehicleIds },
         timestamp: { $exists: true, $ne: null }
     };
 
-    // ใช้ค่า startDate / endDate หรือ default เดือนนี้
     match.timestamp = {
-        $gte: startDate ? new Date(startDate) : defaultStart,
-        $lte: endDate ? new Date(endDate) : defaultEnd
+        $gte: dateStart,
+        $lte: dateEnd
     };
 
     console.log('vehicleIdArray:', vehicleIds);
     console.log('match query:', match);
+    console.log(`DateTime range: ${dateStart.toISOString()} - ${dateEnd.toISOString()}`);
 
     const latestHeartbeats = await VehicleHeartbeatModel.aggregate([
         { $match: match },
@@ -314,6 +331,188 @@ export const getMonthlyUsage = async (year: number, month: number, vehicleId?: s
             throw new Error(error.message || 'Failed to calculate monthly usage');
         } else {
             throw new Error('Failed to calculate monthly usage');
+        }
+    }
+};
+
+export const getDailyUsagePerVehicleBulk = async (
+    vehicleIds: string[],
+    date: string // YYYY-MM-DD format
+): Promise<any[]> => {
+    try {
+        const dateObj = new Date(date);
+        if (isNaN(dateObj.getTime())) {
+            throw new Error(`Invalid date format: ${date}. Use YYYY-MM-DD`);
+        }
+
+        const startDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 0, 0, 0, 0);
+        const endDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 23, 59, 59, 999);
+
+        const query: any = {
+            vehicleId: { $in: vehicleIds },
+            timestamp: {
+                $gte: startDate,
+                $lte: endDate
+            },
+            'rawData.total_usage_time': { $exists: true }
+        };
+
+        // Get first and last records for each vehicle on that day
+        const latestHeartbeats = await VehicleHeartbeatModel.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: '$vehicleId',
+                    firstRecord: { $first: '$$ROOT' },
+                    lastRecord: { $last: '$$ROOT' }
+                }
+            },
+            {
+                $project: {
+                    vehicleId: '$_id',
+                    date: dateObj.toISOString().split('T')[0],
+                    dailyUsage: {
+                        $subtract: [
+                            '$lastRecord.rawData.total_usage_time',
+                            '$firstRecord.rawData.total_usage_time'
+                        ]
+                    },
+                    startTime: '$firstRecord.timestamp',
+                    endTime: '$lastRecord.timestamp',
+                    startUsage: '$firstRecord.rawData.total_usage_time',
+                    endUsage: '$lastRecord.rawData.total_usage_time',
+                    recordCount: { $sum: 1 }
+                }
+            },
+            { $sort: { vehicleId: 1 } }
+        ]).exec();
+
+        // Add missing vehicles with 0 usage
+        const vehicleMap = new Map(latestHeartbeats.map(v => [v.vehicleId, v]));
+        const result = vehicleIds.map(vid => {
+            if (vehicleMap.has(vid)) {
+                return vehicleMap.get(vid);
+            }
+            return {
+                vehicleId: vid,
+                date: dateObj.toISOString().split('T')[0],
+                dailyUsage: 0,
+                startTime: null,
+                endTime: null,
+                startUsage: null,
+                endUsage: null,
+                recordCount: 0
+            };
+        });
+
+        return result;
+    } catch (error) {
+        console.error('Error calculating daily usage:', error);
+        if (error instanceof Error) {
+            throw new Error(error.message || 'Failed to calculate daily usage');
+        } else {
+            throw new Error('Failed to calculate daily usage');
+        }
+    }
+};
+export const getUsageTimeSeriesForGraph = async (
+    vehicleIds: string[],
+    startDateTime?: string,
+    endDateTime?: string
+): Promise<any> => {
+    try {
+        // Parse datetime or use default (current month)
+        const now = new Date();
+        const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        let dateStart = defaultStart;
+        let dateEnd = defaultEnd;
+
+        if (startDateTime) {
+            dateStart = new Date(startDateTime);
+            if (isNaN(dateStart.getTime())) {
+                throw new Error(`Invalid startDateTime format: ${startDateTime}`);
+            }
+        }
+        if (endDateTime) {
+            dateEnd = new Date(endDateTime);
+            if (isNaN(dateEnd.getTime())) {
+                throw new Error(`Invalid endDateTime format: ${endDateTime}`);
+            }
+        }
+
+        const query: any = {
+            vehicleId: { $in: vehicleIds },
+            timestamp: {
+                $gte: dateStart,
+                $lte: dateEnd
+            },
+            'rawData.total_usage_time': { $exists: true, $ne: null }
+        };
+
+        // Fetch all records and sort by timestamp
+        const records = await VehicleHeartbeatModel.find(query)
+            .select('vehicleId timestamp rawData.total_usage_time')
+            .sort({ vehicleId: 1, timestamp: 1 })
+            .lean()
+            .exec();
+
+        // Group by vehicleId and create time-series data
+        const seriesMap: Record<string, any[]> = {};
+
+        vehicleIds.forEach(vid => {
+            seriesMap[vid] = [];
+        });
+
+        // Process records for each vehicle
+        records.forEach((record: any) => {
+            if (seriesMap[record.vehicleId]) {
+                seriesMap[record.vehicleId].push({
+                    timestamp: record.timestamp,
+                    usage: record.rawData.total_usage_time,
+                    date: record.timestamp.toISOString()
+                });
+            }
+        });
+
+        // Calculate cumulative usage and format for graph
+        const graphData: Record<string, any[]> = {};
+
+        Object.entries(seriesMap).forEach(([vehicleId, points]) => {
+            graphData[vehicleId] = points.map((point, index) => {
+                const previousUsage = index > 0 ? points[index - 1].usage : point.usage;
+                const usageDelta = point.usage - previousUsage;
+
+                return {
+                    timestamp: point.date,
+                    totalUsage: point.usage,
+                    usageDelta: usageDelta >= 0 ? usageDelta : 0,
+                    recordIndex: index + 1
+                };
+            });
+        });
+
+        return {
+            period: {
+                start: dateStart.toISOString(),
+                end: dateEnd.toISOString()
+            },
+            vehicles: Object.keys(graphData).map(vid => ({
+                vehicleId: vid,
+                records: graphData[vid],
+                totalRecords: graphData[vid].length,
+                startUsage: graphData[vid][0]?.totalUsage || 0,
+                endUsage: graphData[vid][graphData[vid].length - 1]?.totalUsage || 0,
+                totalUsageDelta: (graphData[vid][graphData[vid].length - 1]?.totalUsage || 0) - (graphData[vid][0]?.totalUsage || 0)
+            }))
+        };
+    } catch (error) {
+        console.error('Error fetching usage time series:', error);
+        if (error instanceof Error) {
+            throw new Error(error.message || 'Failed to fetch usage time series');
+        } else {
+            throw new Error('Failed to fetch usage time series');
         }
     }
 };
