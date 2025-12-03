@@ -10,7 +10,8 @@ import {
     getLatestVehicleModelStatusBulk,
     getLatestVehicleHeartbeatBulk,
     getDailyUsagePerVehicleBulk,
-    getUsageTimeSeriesForGraph
+    getUsageTimeSeriesForGraph,
+    getUsageTimeSeriesForGraphBulk
 } from '../services/vehicleDataService';
 
 export const getLatestVehicleHeartbeatBulkController = async (req: Request, res: Response) => {
@@ -394,6 +395,54 @@ export const getUsageTimeSeriesForGraphController = async (req: Request, res: Re
             success: true,
             data: results
         });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Internal Server Error' });
+    }
+};
+
+export const getUsageTimeSeriesForGraphBulkController = async (req: Request, res: Response) => {
+    try {
+        const { vehicleIds, startDateTime, endDateTime, page = 1, limit = 100, interval = 'all' } = req.query;
+        
+        if (!vehicleIds) {
+            return res.status(400).json({ error: 'Missing vehicleIds in query' });
+        }
+
+        // Parse vehicleIds as array
+        const vehicleIdArray = typeof vehicleIds === 'string'
+            ? vehicleIds.split(',').map(id => id.trim())
+            : Array.isArray(vehicleIds)
+                ? vehicleIds.map(id => String(id).trim())
+                : [];
+
+        if (vehicleIdArray.length === 0) {
+            return res.status(400).json({ error: 'vehicleIds must not be empty' });
+        }
+
+        // Build vehicle configs
+        const vehicleConfigs = vehicleIdArray.map(vid => ({
+            vehicleId: vid,
+            startDateTime: startDateTime as string | undefined,
+            endDateTime: endDateTime as string | undefined
+        }));
+
+        const pageNum = Math.max(1, parseInt(page as string) || 1);
+        const limitNum = Math.max(1, Math.min(parseInt(limit as string) || 100, 1000));
+        const intervalType = (interval as string) || 'all';
+
+        if (!['all', 'hourly', 'daily'].includes(intervalType)) {
+            return res.status(400).json({ error: 'interval must be one of: all, hourly, daily' });
+        }
+
+        const results = await getUsageTimeSeriesForGraphBulk(
+            vehicleConfigs,
+            pageNum,
+            limitNum,
+            intervalType as 'all' | 'hourly' | 'daily'
+        );
+
+        res.json(results);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error instanceof Error ? error.message : 'Internal Server Error' });
