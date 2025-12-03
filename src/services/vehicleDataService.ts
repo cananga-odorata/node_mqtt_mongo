@@ -516,3 +516,171 @@ export const getUsageTimeSeriesForGraph = async (
         }
     }
 };
+
+export const getUsageTimeSeriesForGraphBulk = async (
+    vehicleConfigs: Array<{ vehicleId: string; startDateTime?: string; endDateTime?: string }>,
+    page: number = 1,
+    limit: number = 100,
+    interval?: 'all' | 'hourly' | 'daily' // 'all' returns all records, 'hourly'/'daily' aggregates
+): Promise<any> => {
+    try {
+        const pageNum = Math.max(1, page);
+        const limitNum = Math.min(Math.max(1, limit), 1000); // Max 1000 records per response
+        const skip = (pageNum - 1) * limitNum;
+
+        const bulkData: any[] = [];
+        let totalRecords = 0;
+
+        // Process each vehicle configuration
+        for (const config of vehicleConfigs) {
+            const now = new Date();
+            const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+            let dateStart = defaultStart;
+            let dateEnd = defaultEnd;
+
+            if (config.startDateTime) {
+                dateStart = new Date(config.startDateTime);
+                if (isNaN(dateStart.getTime())) {
+                    throw new Error(`Invalid startDateTime for ${config.vehicleId}: ${config.startDateTime}`);
+                }
+            }
+            if (config.endDateTime) {
+                dateEnd = new Date(config.endDateTime);
+                if (isNaN(dateEnd.getTime())) {
+                    throw new Error(`Invalid endDateTime for ${config.vehicleId}: ${config.endDateTime}`);
+                }
+            }
+
+            const query: any = {
+                vehicleId: config.vehicleId,
+                timestamp: {
+                    $gte: dateStart,
+                    $lte: dateEnd
+                },
+                'rawData.total_usage_time': { $exists: true, $ne: null }
+            };
+
+            // Get total count for pagination
+            const totalCount = await VehicleHeartbeatModel.countDocuments(query);
+            totalRecords = Math.max(totalRecords, totalCount);
+
+            // Fetch paginated records
+            const records = await VehicleHeartbeatModel.find(query)
+                .select('vehicleId timestamp rawData.total_usage_time')
+                .sort({ timestamp: 1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean()
+                .exec();
+
+            // Apply interval aggregation if specified
+            let processedRecords = records.map((record: any, index: number) => {
+                const previousUsage = index > 0 ? records[index - 1].rawData.total_usage_time : record.rawData.total_usage_time;
+                const usageDelta = record.rawData.total_usage_time - previousUsage;
+
+                return {
+                    timestamp: record.timestamp.toISOString(),
+                    totalUsage: record.rawData.total_usage_time,
+                    usageDelta: usageDelta >= 0 ? usageDelta : 0
+                };
+            });
+
+            if (interval === 'hourly') {
+                processedRecords = aggregateRecordsByInterval(processedRecords, 'hourly');
+            } else if (interval === 'daily') {
+                processedRecords = aggregateRecordsByInterval(processedRecords, 'daily');
+            }
+
+            bulkData.push({
+                vehicleId: config.vehicleId,
+                period: {
+                    start: dateStart.toISOString(),
+                    end: dateEnd.toISOString()
+                },
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total: totalCount,
+                    totalPages: Math.ceil(totalCount / limitNum)
+                },
+                interval: interval || 'all',
+                records: processedRecords,
+                recordCount: processedRecords.length
+            });
+        }
+
+        return {
+            success: true,
+            vehicles: bulkData,
+            metadata: {
+                requestedVehicles: vehicleConfigs.length,
+                returnedVehicles: bulkData.length,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(totalRecords / limitNum)
+                }
+            }
+        };
+    } catch (error) {
+        console.error('Error fetching bulk usage time series:', error);
+        if (error instanceof Error) {
+            throw new Error(error.message || 'Failed to fetch bulk usage time series');
+        } else {
+            throw new Error('Failed to fetch bulk usage time series');
+        }
+    }
+};
+
+// Helper function to aggregate records by time interval
+const aggregateRecordsByInterval = (records: any[], interval: 'hourly' | 'daily'): any[] => {
+    if (records.length === 0) return [];
+
+    const aggregated: any[] = [];
+    let currentBucket: any = null;
+    let bucketRecords: any[] = [];
+
+    records.forEach(record => {
+        const timestamp = new Date(record.timestamp);
+        let bucketKey: string;
+
+        if (interval === 'hourly') {
+            bucketKey = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate(), timestamp.getHours()).toISOString();
+        } else {
+            bucketKey = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate()).toISOString();
+        }
+
+        if (!currentBucket || currentBucket !== bucketKey) {
+            if (bucketRecords.length > 0) {
+                const firstRecord = bucketRecords[0];
+                const lastRecord = bucketRecords[bucketRecords.length - 1];
+                aggregated.push({
+                    timestamp: currentBucket,
+                    totalUsage: lastRecord.totalUsage,
+                    usageDelta: lastRecord.totalUsage - firstRecord.totalUsage,
+                    recordsInBucket: bucketRecords.length
+                });
+            }
+            currentBucket = bucketKey;
+            bucketRecords = [record];
+        } else {
+            bucketRecords.push(record);
+        }
+    });
+
+    // Don't forget the last bucket
+    if (bucketRecords.length > 0) {
+        const firstRecord = bucketRecords[0];
+        const lastRecord = bucketRecords[bucketRecords.length - 1];
+        aggregated.push({
+            timestamp: currentBucket,
+            totalUsage: lastRecord.totalUsage,
+            usageDelta: lastRecord.totalUsage - firstRecord.totalUsage,
+            recordsInBucket: bucketRecords.length
+        });
+    }
+
+    return aggregated;
+};

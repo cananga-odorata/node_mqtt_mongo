@@ -6,12 +6,16 @@ import {
     getReportUsagePerYear,
     getLatestVehicleHeartbeatBulkController,
     getDailyUsagePerVehicleBulkController,
-    getUsageTimeSeriesForGraphController
+    getUsageTimeSeriesForGraphController,
+    getUsageTimeSeriesForGraphBulkController
 } from '../../controllers/vehicleController';
 
 const router = express.Router();
 
 // GET /api/v1/heartbeat/usage-time-series?vehicleIds=...&startDateTime=...&endDateTime=...
+// GET /api/v1/heartbeat/usage-time-series-bulk?vehicleIds=...&startDateTime=...&endDateTime=...&page=1&limit=100&interval=all
+router.get('/usage-time-series-bulk', getUsageTimeSeriesForGraphBulkController as RequestHandler);
+
 router.get('/usage-time-series', getUsageTimeSeriesForGraphController as RequestHandler);
 
 // GET /api/v1/heartbeat/daily-usage-bulk?vehicleIds=...&date=YYYY-MM-DD
