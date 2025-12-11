@@ -528,11 +528,8 @@ export const getUsageTimeSeriesForGraphBulk = async (
         const limitNum = Math.min(Math.max(1, limit), 1000); // Max 1000 records per response
         const skip = (pageNum - 1) * limitNum;
 
-        const bulkData: any[] = [];
-        let totalRecords = 0;
-
-        // Process each vehicle configuration
-        for (const config of vehicleConfigs) {
+        // Process each vehicle configuration in parallel
+        const bulkData = await Promise.all(vehicleConfigs.map(async (config) => {
             const now = new Date();
             const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1);
             const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -562,16 +559,10 @@ export const getUsageTimeSeriesForGraphBulk = async (
                 'rawData.total_usage_time': { $exists: true, $ne: null }
             };
 
-            // Get total count for pagination
-            const totalCount = await VehicleHeartbeatModel.countDocuments(query);
-            totalRecords = Math.max(totalRecords, totalCount);
-
-            // Fetch paginated records
+            // Get ALL records sorted by timestamp (no skip/limit)
             const records = await VehicleHeartbeatModel.find(query)
                 .select('vehicleId timestamp rawData.total_usage_time')
                 .sort({ timestamp: 1 })
-                .skip(skip)
-                .limit(limitNum)
                 .lean()
                 .exec();
 
@@ -593,7 +584,14 @@ export const getUsageTimeSeriesForGraphBulk = async (
                 processedRecords = aggregateRecordsByInterval(processedRecords, 'daily');
             }
 
-            bulkData.push({
+            // Filter out records with 0 usage delta
+            processedRecords = processedRecords.filter(record => record.usageDelta > 0);
+
+            // Calculate correct total and paginate
+            const totalCount = processedRecords.length;
+            const paginatedRecords = processedRecords.slice(skip, skip + limitNum);
+
+            return {
                 vehicleId: config.vehicleId,
                 period: {
                     start: dateStart.toISOString(),
@@ -606,10 +604,12 @@ export const getUsageTimeSeriesForGraphBulk = async (
                     totalPages: Math.ceil(totalCount / limitNum)
                 },
                 interval: interval || 'all',
-                records: processedRecords,
-                recordCount: processedRecords.length
-            });
-        }
+                records: paginatedRecords,
+                recordCount: paginatedRecords.length
+            };
+        }));
+
+        const totalRecords = bulkData.reduce((max, item) => Math.max(max, item.pagination.total), 0);
 
         return {
             success: true,
