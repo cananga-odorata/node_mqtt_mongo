@@ -403,7 +403,7 @@ export const getUsageTimeSeriesForGraphController = async (req: Request, res: Re
 
 export const getUsageTimeSeriesForGraphBulkController = async (req: Request, res: Response) => {
     try {
-        const { vehicleIds, startDateTime, endDateTime, page = 1, limit = 100, interval = 'all', sortRecord = 'ASC' } = req.query;
+        const { vehicleIds, startDateTime, endDateTime, page = 1, limit = 100, interval = 'all', sortRecord = 'DESC' } = req.query;
 
         if (!vehicleIds) {
             return res.status(400).json({ error: 'Missing vehicleIds in query' });
