@@ -403,8 +403,8 @@ export const getUsageTimeSeriesForGraphController = async (req: Request, res: Re
 
 export const getUsageTimeSeriesForGraphBulkController = async (req: Request, res: Response) => {
     try {
-        const { vehicleIds, startDateTime, endDateTime, page = 1, limit = 100, interval = 'all' } = req.query;
-        
+        const { vehicleIds, startDateTime, endDateTime, page = 1, limit = 100, interval = 'all', sortRecord = 'ASC' } = req.query;
+
         if (!vehicleIds) {
             return res.status(400).json({ error: 'Missing vehicleIds in query' });
         }
@@ -430,6 +430,7 @@ export const getUsageTimeSeriesForGraphBulkController = async (req: Request, res
         const pageNum = Math.max(1, parseInt(page as string) || 1);
         const limitNum = Math.max(1, Math.min(parseInt(limit as string) || 100, 1000));
         const intervalType = (interval as string) || 'all';
+        const sortType = (sortRecord as string).toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
 
         if (!['all', 'hourly', 'daily'].includes(intervalType)) {
             return res.status(400).json({ error: 'interval must be one of: all, hourly, daily' });
@@ -439,7 +440,8 @@ export const getUsageTimeSeriesForGraphBulkController = async (req: Request, res
             vehicleConfigs,
             pageNum,
             limitNum,
-            intervalType as 'all' | 'hourly' | 'daily'
+            intervalType as 'all' | 'hourly' | 'daily',
+            sortType as 'ASC' | 'DESC'
         );
 
         res.json(results);

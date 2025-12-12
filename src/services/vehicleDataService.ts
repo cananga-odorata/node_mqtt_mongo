@@ -521,7 +521,8 @@ export const getUsageTimeSeriesForGraphBulk = async (
     vehicleConfigs: Array<{ vehicleId: string; startDateTime?: string; endDateTime?: string }>,
     page: number = 1,
     limit: number = 100,
-    interval?: 'all' | 'hourly' | 'daily' // 'all' returns all records, 'hourly'/'daily' aggregates
+    interval?: 'all' | 'hourly' | 'daily', // 'all' returns all records, 'hourly'/'daily' aggregates
+    sortType: 'ASC' | 'DESC' = 'ASC'
 ): Promise<any> => {
     try {
         const pageNum = Math.max(1, page);
@@ -586,6 +587,11 @@ export const getUsageTimeSeriesForGraphBulk = async (
 
             // Filter out records with 0 usage delta
             processedRecords = processedRecords.filter(record => record.usageDelta > 0);
+
+            // Apply Sorting
+            if (sortType === 'DESC') {
+                processedRecords.reverse();
+            }
 
             // Calculate correct total and paginate
             const totalCount = processedRecords.length;
