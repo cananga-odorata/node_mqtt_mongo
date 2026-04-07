@@ -16,41 +16,31 @@ export const getLatestVehicleHeartbeatBulk = async (
     endDateTime?: string
 ): Promise<IVehicleHeartbeat[]> => {
 
-    // กำหนด default เป็นเดือนปัจจุบันถ้าไม่ได้ส่ง startDateTime / endDateTime
-    const now = new Date();
-    const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1); // วันที่ 1 ของเดือนนี้
-    const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); // สิ้นเดือน
-
-    let dateStart = defaultStart;
-    let dateEnd = defaultEnd;
-
-    // Parse startDateTime และ endDateTime (ISO 8601 format: 2025-12-02T08:00:00 หรือ 2025-12-02 08:00)
-    if (startDateTime) {
-        dateStart = new Date(startDateTime);
-        if (isNaN(dateStart.getTime())) {
-            throw new Error(`Invalid startDateTime format: ${startDateTime}. Use ISO 8601 format (e.g., 2025-12-02T08:00:00)`);
-        }
-    }
-    if (endDateTime) {
-        dateEnd = new Date(endDateTime);
-        if (isNaN(dateEnd.getTime())) {
-            throw new Error(`Invalid endDateTime format: ${endDateTime}. Use ISO 8601 format (e.g., 2025-12-02T17:00:00)`);
-        }
-    }
-
     const match: any = {
         vehicleId: { $in: vehicleIds },
-        timestamp: { $exists: true, $ne: null }
     };
 
-    match.timestamp = {
-        $gte: dateStart,
-        $lte: dateEnd
-    };
+    // ถ้าส่ง startDateTime / endDateTime มา → filter ด้วย date range
+    if (startDateTime || endDateTime) {
+        match.timestamp = {};
+        if (startDateTime) {
+            const dateStart = new Date(startDateTime);
+            if (isNaN(dateStart.getTime())) {
+                throw new Error(`Invalid startDateTime format: ${startDateTime}. Use ISO 8601 format (e.g., 2025-12-02T08:00:00)`);
+            }
+            match.timestamp.$gte = dateStart;
+        }
+        if (endDateTime) {
+            const dateEnd = new Date(endDateTime);
+            if (isNaN(dateEnd.getTime())) {
+                throw new Error(`Invalid endDateTime format: ${endDateTime}. Use ISO 8601 format (e.g., 2025-12-02T17:00:00)`);
+            }
+            match.timestamp.$lte = dateEnd;
+        }
+    }
 
     console.log('vehicleIdArray:', vehicleIds);
-    console.log('match query:', match);
-    console.log(`DateTime range: ${dateStart.toISOString()} - ${dateEnd.toISOString()}`);
+    console.log('match query:', JSON.stringify(match));
 
     const latestHeartbeats = await VehicleHeartbeatModel.aggregate([
         { $match: match },
