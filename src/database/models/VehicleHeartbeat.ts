@@ -15,6 +15,8 @@ const VehicleHeartbeatSchema = new mongoose.Schema<IVehicleHeartbeat>({
     },
 });
 
+VehicleHeartbeatSchema.index({ vehicleId: 1, timestamp: -1 });
+
 const VehicleHeartbeatModel = mongoose.model<IVehicleHeartbeat>("VehicleHeartbeat", VehicleHeartbeatSchema);
 
 export default VehicleHeartbeatModel;
